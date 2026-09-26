@@ -10,8 +10,12 @@ DEEP+ book summed by price must equal the DEEP book. The same engine
 compiles to WebAssembly and drives the
 [tyche-replay](https://github.com/Valkyra-Labs/tyche-replay) web app.
 
-Status: early. The parity record is being built; numbers will be
-published in `docs/MEASUREMENTS.md` with their build stamp.
+Status: early. Measured on 2026-09-24 for AAPL, NVDA, QQQ, SPY and TSLA
+(9.8 million checkpoints): the book rebuilt from DEEP+ equals DEEP at
+every event end, with no unknown, duplicate or overfilled orders; the
+whole day checks in 2.5 s. In the browser, a full NVDA day (3 million
+messages) loads in about 0.3 s and replays at 600x at 60 frames per
+second. Method, stamps and limits: [docs/MEASUREMENTS.md](docs/MEASUREMENTS.md).
 
 ## What it does
 
