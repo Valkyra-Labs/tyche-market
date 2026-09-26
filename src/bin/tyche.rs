@@ -199,6 +199,73 @@ fn parity_cmd(args: &[String]) -> Result<()> {
         r.anomalies,
         t.elapsed().as_secs_f64()
     );
+    for (s, c, m) in &r.per_symbol {
+        println!(
+            "  {s}: {c} checkpoints, {m} disagree ({:.4}%)",
+            100.0 * *m as f64 / (*c).max(1) as f64
+        );
+    }
+    let mut durations: Vec<i64> = r
+        .episodes
+        .iter()
+        .filter_map(|e| e.end.map(|end| end - e.start))
+        .collect();
+    durations.sort_unstable();
+    let q = |p: f64| {
+        durations
+            .get(((durations.len().saturating_sub(1)) as f64 * p) as usize)
+            .copied()
+            .unwrap_or(0)
+    };
+    let unresolved = r.episodes.iter().filter(|e| e.end.is_none()).count();
+    // A disagreement that ends at the same timestamp was a DEEP update
+    // flagged complete in the middle of one event (more updates with the
+    // same timestamp followed); at the event's end the books agreed.
+    let intra: u64 = r
+        .episodes
+        .iter()
+        .filter(|e| e.end == Some(e.start))
+        .map(|e| e.checkpoints)
+        .sum();
+    let at_event_end = r.full_book_equal + intra;
+    println!(
+        "at event ends (last update of a timestamp): {} of {} equal ({:.4}%); {} disagreements were inside an event",
+        at_event_end,
+        r.checkpoints,
+        pct(at_event_end),
+        intra
+    );
+    let odd = r.episodes.iter().filter(|e| e.odd_lot_only).count();
+    println!(
+        "episodes {}: resolved in p50 {:.1} us, p90 {:.1} us, p99 {:.1} ms, max {:.1} s; unresolved {}; odd-lot-only {}",
+        r.episodes.len(),
+        q(0.5) as f64 / 1e3,
+        q(0.9) as f64 / 1e3,
+        q(0.99) as f64 / 1e6,
+        q(1.0) as f64 / 1e9,
+        unresolved,
+        odd
+    );
+    let mut by_hour = std::collections::BTreeMap::new();
+    for e in &r.episodes {
+        // Eastern time: UTC-4 in September (daylight saving).
+        let h = ((e.start / 1_000_000_000 - 4 * 3600).rem_euclid(86_400)) / 3600;
+        *by_hour.entry(h).or_insert(0u64) += e.checkpoints;
+    }
+    println!("disagreeing checkpoints by hour (ET, UTC-4): {by_hour:?}");
+    let mut longest: Vec<_> = r.episodes.iter().collect();
+    longest.sort_by_key(|e| std::cmp::Reverse(e.end.map(|x| x - e.start).unwrap_or(i64::MAX)));
+    for e in longest.iter().take(5) {
+        println!(
+            "  longest: {} from {} for {} checkpoints, {}",
+            e.symbol,
+            e.start,
+            e.checkpoints,
+            e.end
+                .map(|x| format!("{:.3} s", (x - e.start) as f64 / 1e9))
+                .unwrap_or("unresolved".into())
+        );
+    }
     for m in &r.mismatches {
         println!("mismatch at {} {}:", m.time, m.symbol);
         for d in m.diffs.iter().take(8) {

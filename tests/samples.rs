@@ -136,3 +136,37 @@ fn parity_is_exact_on_matching_streams_and_reports_a_divergence() {
     assert_eq!(r.mismatches[0].diffs[0].deep, 300);
     assert_eq!(r.mismatches[0].diffs[0].deep_plus, 100);
 }
+
+fn add_sym(sym: &str, time: i64, id: i64, side: Side, size: u32, price: i64) -> Message {
+    Message::AddOrder {
+        side,
+        time,
+        symbol: Symbol::new(sym),
+        order_id: id,
+        size,
+        price,
+    }
+}
+
+/// Timestamps are ordered within a symbol, not across symbols: a later
+/// message of one symbol may come first in the feed. Alignment must not
+/// wait on it (the first version did, and reported 0.93% disagreement on
+/// a real day where the books in fact agreed).
+#[test]
+fn parity_aligns_each_symbol_on_its_own() {
+    let deep = vec![Message::PriceLevel {
+        side: Side::Buy,
+        complete: true,
+        time: 10,
+        symbol: Symbol::new("AAA"),
+        size: 100,
+        price: 990_500,
+    }];
+    let plus = vec![
+        add_sym("BBB", 50, 2, Side::Buy, 100, 100_000),
+        add_sym("AAA", 10, 1, Side::Buy, 100, 990_500),
+    ];
+    let r = parity::check(deep, plus, 1);
+    assert_eq!(r.checkpoints, 1);
+    assert_eq!(r.full_book_equal, 1);
+}
