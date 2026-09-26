@@ -15,14 +15,20 @@ exclude = ["/data", "/tests/fixtures/*.pcap.gz"]
 default = ["gzip"]
 # Read .pcap.gz files directly (flate2 with its pure-Rust backend).
 gzip = ["dep:flate2"]
+# JavaScript bindings for the browser (wasm-bindgen).
+wasm = ["dep:wasm-bindgen"]
 
 [dependencies]
 flate2 = { version = "1", optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
 
 [[bin]]
 name = "tyche"
 path = "src/bin/tyche.rs"
 required-features = ["gzip"]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
 
 [profile.release]
 debug = 1

@@ -7,6 +7,7 @@
 //! - [`capture`]: symbol-filtered captures small enough for a demo.
 //! - [`parity`]: DEEP+ rebuilt and aggregated against DEEP, checkpoint by
 //!   checkpoint.
+//! - [`replay`]: one symbol's day, seekable to any moment.
 //!
 //! Data provided for free by IEX. By accessing or using IEX Historical
 //! Data, you agree to the IEX Historical Data Terms of Use.
@@ -17,6 +18,9 @@ pub mod iextp;
 pub mod message;
 pub mod parity;
 pub mod pcap;
+pub mod replay;
+#[cfg(feature = "wasm")]
+pub mod wasm;
 
 pub use book::{Anomalies, LevelBook, Levels, OrderBook, Quote};
 pub use message::{decode, Message, Price, Side, Symbol};

@@ -95,6 +95,11 @@ impl OrderBook {
         self.orders.len()
     }
 
+    /// Side of a resting order, if it is on the book.
+    pub fn side_of(&self, order_id: i64) -> Option<Side> {
+        self.orders.get(&order_id).map(|o| o.side)
+    }
+
     /// Apply one DEEP+ message; messages that do not change displayed
     /// size are ignored.
     pub fn apply(&mut self, m: &Message) {
