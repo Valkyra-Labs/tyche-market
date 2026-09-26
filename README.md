@@ -1,0 +1,56 @@
+# tyche-market
+
+Order-book reconstruction and replay for IEX market data, in Rust.
+
+tyche-market reads the pcap files IEX publishes as free historical data,
+rebuilds the order book of any symbol message by message from DEEP+
+(order by order), and checks it against DEEP (aggregated by price level)
+for the same day: at every point where DEEP marks an event complete, the
+DEEP+ book summed by price must equal the DEEP book. The same engine
+compiles to WebAssembly and drives the
+[tyche-replay](https://github.com/Valkyra-Labs/tyche-replay) web app.
+
+Status: early. The parity record is being built; numbers will be
+published in `docs/MEASUREMENTS.md` with their build stamp.
+
+## What it does
+
+- Reads classic pcap and pcapng, gzip or not, from a file or a stream.
+- Parses IEX Transport Protocol v1 segments; detects duplicate and
+  missing sequence numbers.
+- Decodes DEEP (v1.08) and DEEP+ (v1.05) messages.
+- Keeps an order-by-order book (add, modify, delete, execute, clear) and
+  a price-level book, with counters for anything that does not fit.
+- Cuts a few symbols out of a day into a small capture file for demos.
+- Runs the DEEP+ versus DEEP parity check.
+
+## Command line
+
+```bash
+cargo install --path . --features gzip
+```
+
+Stream a day from IEX and keep only a few symbols, without storing the
+full file:
+
+```bash
+curl -s "$DEEP_PLUS_URL" | tyche extract --symbols AAPL,SPY -o day_deepplus.tyc -
+```
+
+```bash
+tyche parity day_deep.tyc day_deepplus.tyc --show 5
+```
+
+Download links for each day are listed by
+`https://iextrading.com/api/1.0/hist?date=YYYYMMDD`.
+
+## Data
+
+Data provided for free by IEX. By accessing or using IEX Historical Data,
+you agree to the IEX Historical Data Terms of Use
+(https://www.iex.io/legal/hist-data-terms). IEX data reflects trading on
+IEX only and is not a basis for trading decisions.
+
+## License
+
+MIT OR Apache-2.0, at your option.
