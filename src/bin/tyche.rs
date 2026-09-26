@@ -81,6 +81,14 @@ fn extract(args: &[String]) -> Result<()> {
         .ok_or("extract needs an input")?;
     let t = Instant::now();
     let out = BufWriter::with_capacity(1 << 20, std::fs::File::create(&out_path)?);
+    if input.ends_with(".tyc") {
+        let kept = capture::filter(&std::fs::read(&input)?, &symbols, out)?;
+        eprintln!(
+            "kept {kept} messages in {:.1} s -> {out_path}",
+            t.elapsed().as_secs_f64()
+        );
+        return Ok(());
+    }
     let stats = capture::extract(open(&input)?, &symbols, out)?;
     eprintln!(
         "protocol {:#06x}: {} packets, {} segments, {} messages, kept {}, duplicates {}, missing {}, other frames {} in {:.1} s -> {}",

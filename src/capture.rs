@@ -101,6 +101,32 @@ pub fn extract<R: Read, W: Write>(
     Ok(stats)
 }
 
+/// Keep only the selected symbols (and symbol-less messages) of an
+/// existing capture. Returns the number of messages written.
+pub fn filter<W: Write>(
+    capture: &[u8],
+    symbols: &HashSet<Symbol>,
+    mut out: W,
+) -> Result<u64, Error> {
+    let cap = Capture::parse(capture)?;
+    write_header(&mut out, cap.protocol)?;
+    let mut kept = 0;
+    for msg in cap.messages() {
+        let msg = msg?;
+        let keep = symbols.is_empty()
+            || match raw_symbol(msg) {
+                None => true,
+                Some(s) => symbols.contains(&Symbol(s)),
+            };
+        if keep {
+            write_record(&mut out, msg)?;
+            kept += 1;
+        }
+    }
+    out.flush()?;
+    Ok(kept)
+}
+
 fn write_header<W: Write>(out: &mut W, protocol: u16) -> Result<(), Error> {
     out.write_all(MAGIC)?;
     out.write_all(&VERSION.to_le_bytes())?;
