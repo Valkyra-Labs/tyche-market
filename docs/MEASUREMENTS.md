@@ -61,21 +61,10 @@ alignment, and tracing one order through both feeds confirmed it.
 What this does not show: other days, other symbols, DEEP+ multi-channel
 (DPLC), recovery from gaps (there were none).
 
-## Browser replay (tyche-replay `e547f7b`, engine `b0e2436`)
+## Browser replay
 
-The engine compiled to WebAssembly (49 KB, 21 KB gzipped) in a Web
-Worker; the UI thread draws a 12-level-per-side ladder on a canvas each
-frame. Browser: the Chromium-based preview pane of the development
-environment, on the host above. NVDA, the day's largest capture: 3.03
-million messages, 23.9 MB gzipped, 105.6 MB inflated.
-
-| measure | result |
-|---|---|
-| load (fetch local, inflate, decode, index, snapshots) | 315-317 ms |
-| playback at 600x (10 minutes of trading per second), 10:00-11:40 ET | 60 fps, frame time p95 16.9 ms |
-| book request in the worker at 600x | p95 0.30 ms |
-| messages applied per second at 600x | 73,987 |
-
-What this does not show: other browsers and machines, a display at more
-than 60 Hz, the heatmap and trade views that are not built yet, and
-backward-seek cost (bounded by 20,000 messages by design; not measured).
+Moved to tyche-replay's `docs/MEASUREMENTS.md`, which measures the app
+with the ladder, heatmap and trades on screen. The first reading, taken
+with a ladder only (tyche-replay `e547f7b`, engine `b0e2436`): NVDA's day
+loads in 315 ms and plays 10:00-11:40 ET at 600x at 60 fps, frame p95
+16.9 ms, worker request p95 0.30 ms.
