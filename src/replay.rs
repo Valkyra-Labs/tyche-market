@@ -170,6 +170,64 @@ impl Replay {
     pub fn all_executions(&self) -> &[Execution] {
         &self.executions
     }
+
+    /// Displayed liquidity over time: the window `(from, to]` split into
+    /// `columns` equal slices; for each slice, the book at the slice's end,
+    /// sampled at `rows` prices `top, top - tick, ...` (top row first).
+    /// Bid sizes are positive, ask sizes negative. Runs on its own copy of
+    /// the book, so the replay's position does not move.
+    pub fn heatmap(
+        &self,
+        from: f64,
+        to: f64,
+        columns: usize,
+        top: Price,
+        tick: Price,
+        rows: usize,
+    ) -> Vec<f32> {
+        let mut out = vec![0f32; columns * rows];
+        if columns == 0 || rows == 0 || to <= from || tick <= 0 {
+            return out;
+        }
+        let start = self.times.partition_point(|t| *t <= from);
+        let (at, snap) = self
+            .snapshots
+            .iter()
+            .rev()
+            .find(|(at, _)| *at <= start)
+            .expect("snapshot 0 exists");
+        let mut book = snap.clone();
+        let mut cursor = *at;
+        let step = (to - from) / columns as f64;
+        for col in 0..columns {
+            let edge = from + step * (col + 1) as f64;
+            let end = self.times.partition_point(|t| *t <= edge);
+            for m in &self.messages[cursor..end] {
+                book.apply(m);
+            }
+            cursor = end;
+            let levels = book.levels();
+            for row in 0..rows {
+                let price = top - tick * row as i64;
+                let cell = &mut out[col * rows + row];
+                if let Some(size) = levels.bids.get(&price) {
+                    *cell = *size as f32;
+                } else if let Some(size) = levels.asks.get(&price) {
+                    *cell = -(*size as f32);
+                }
+            }
+        }
+        out
+    }
+
+    /// Midpoint of the best bid and ask at the replay's position, if both
+    /// exist.
+    pub fn mid(&self) -> Option<Price> {
+        match self.book.levels().best() {
+            (Some((b, _)), Some((a, _))) => Some((a + b) / 2),
+            _ => None,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -185,6 +243,24 @@ mod tests {
             size,
             price,
         }
+    }
+
+    #[test]
+    fn heatmap_samples_the_book_at_each_column_without_moving_the_replay() {
+        let messages = vec![
+            add(10, 1, Side::Buy, 100, 1_000_000),
+            add(20, 2, Side::Sell, 50, 1_000_100),
+            add(30, 3, Side::Buy, 70, 999_900),
+        ];
+        let mut r = Replay::from_messages(Symbol::new("ZIEXT"), messages);
+        r.seek(15.0);
+        // Times are relative to the first message (10): 0, 10, 20.
+        let h = r.heatmap(0.0, 20.0, 2, 1_000_100, 100, 3);
+        // Column 0 ends at 10: order 1 and order 2 on the book.
+        assert_eq!(&h[0..3], &[-50.0, 100.0, 0.0]);
+        // Column 1 ends at 20: order 3 added at 999,900.
+        assert_eq!(&h[3..6], &[-50.0, 100.0, 70.0]);
+        assert_eq!(r.cursor(), 2, "replay position unchanged");
     }
 
     #[test]

@@ -82,6 +82,38 @@ impl TycheReplay {
         out
     }
 
+    /// Liquidity heatmap over `(from, to]` (ns since time 0): `columns`
+    /// time slices by `rows` prices from `top` (dollars) down in steps of
+    /// `tick` (dollars); bids positive, asks negative. Column-major.
+    pub fn heatmap(
+        &self,
+        from: f64,
+        to: f64,
+        columns: u32,
+        top: f64,
+        tick: f64,
+        rows: u32,
+    ) -> Vec<f32> {
+        let to_price = |d: f64| (d * 10_000.0).round() as i64;
+        self.inner.heatmap(
+            from,
+            to,
+            columns as usize,
+            to_price(top),
+            to_price(tick),
+            rows as usize,
+        )
+    }
+
+    /// Midpoint of the best bid and ask in dollars (NaN when one side is
+    /// empty).
+    pub fn mid(&self) -> f64 {
+        self.inner
+            .mid()
+            .map(|p| p as f64 / 10_000.0)
+            .unwrap_or(f64::NAN)
+    }
+
     /// Orders resting on the book now.
     #[wasm_bindgen(js_name = orderCount)]
     pub fn order_count(&self) -> u32 {
