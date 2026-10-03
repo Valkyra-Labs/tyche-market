@@ -13,9 +13,12 @@ compiles to WebAssembly and drives the
 Status: early. Measured on 2026-09-24 for AAPL, NVDA, QQQ, SPY and TSLA
 (9.8 million checkpoints): the book rebuilt from DEEP+ equals DEEP at
 every event end, with no unknown, duplicate or overfilled orders; the
-whole day checks in 2.5 s. In the browser, a full NVDA day (3 million
-messages) loads in about 0.3 s and replays at 600x at 60 frames per
-second. Method, stamps and limits: [docs/MEASUREMENTS.md](docs/MEASUREMENTS.md).
+whole day checks in 2.5 s. In the browser
+([tyche-replay](https://github.com/Valkyra-Labs/tyche-replay), engine
+`8f70fe5`), a full NVDA day (3 million messages) loads in about 0.3 s and
+replays at 600x at 60 frames per second; that record is tyche-replay's
+docs/MEASUREMENTS.md. Method, stamps and limits for the rest:
+[docs/MEASUREMENTS.md](docs/MEASUREMENTS.md).
 
 ## What it does
 
@@ -25,8 +28,12 @@ second. Method, stamps and limits: [docs/MEASUREMENTS.md](docs/MEASUREMENTS.md).
 - Decodes DEEP (v1.08) and DEEP+ (v1.05) messages.
 - Keeps an order-by-order book (add, modify, delete, execute, clear) and
   a price-level book, with counters for anything that does not fit.
-- Cuts a few symbols out of a day into a small capture file for demos.
+- Cuts a few symbols out of a day, or out of an existing `.tyc`, into a
+  small capture file for demos.
+- Replays one symbol's day with seeking (a book snapshot every 20,000
+  messages), the book midpoint and a liquidity heatmap.
 - Runs the DEEP+ versus DEEP parity check.
+- Builds to WebAssembly (`--features wasm`).
 
 ## Command line
 

@@ -1,6 +1,7 @@
 # Measurements
 
-Every number in the README comes from here, with its stamp. Host: Apple
+Every number in the README comes from here, with its stamp, except the
+browser figures, which come from tyche-replay's docs/MEASUREMENTS.md. Host: Apple
 M4 Pro (12 CPU cores: 8 performance, 4 efficiency), 24 GB, macOS 26.6.
 Toolchain: Rust 1.98.0, release build. Data: IEX HIST for 2026-09-24,
 DEEP 1.0 (`20260924_IEXTP1_DEEP1.0.pcap.gz`, 15.13 GB) and DEEP+ single

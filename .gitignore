@@ -3,3 +3,7 @@
 .DS_Store
 /pkg
 /docs/inside/
+# Local agent instructions and settings; never committed.
+CLAUDE.md
+AGENTS.md
+.claude/
