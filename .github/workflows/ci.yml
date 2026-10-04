@@ -7,6 +7,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
 
@@ -27,7 +30,18 @@ jobs:
       - run: cargo clippy --all-targets -- -D warnings
       - run: cargo clippy --all-targets --no-default-features -- -D warnings
       - run: cargo clippy --all-targets --features wasm -- -D warnings
-      - run: cargo test --release
+      # Kept for the tests badge; bash on every runner, so a failed test
+      # still fails the step through the pipe.
+      - name: cargo test --release
+        shell: bash
+        run: cargo test --release 2>&1 | tee test-output.txt
+      - if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-output
+          path: test-output.txt
+          if-no-files-found: error
+          retention-days: 7
 
   wasm:
     name: WebAssembly package
@@ -39,6 +53,12 @@ jobs:
       - run: curl -sSf https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
       - run: wasm-pack build --release --target web --out-dir pkg --out-name tyche_market -- --no-default-features --features wasm
       - run: ls -l pkg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wasm
+          path: pkg/tyche_market_bg.wasm
+          if-no-files-found: error
+          retention-days: 7
 
   msrv:
     name: MSRV (1.85)
@@ -48,3 +68,74 @@ jobs:
       - run: rustup toolchain install 1.85 --profile minimal && rustup target add wasm32-unknown-unknown --toolchain 1.85
       - run: cargo +1.85 check --all-targets
       - run: cargo +1.85 check --lib --no-default-features --features wasm --target wasm32-unknown-unknown
+
+  # Builds the badges on every run, so a value that can no longer be read
+  # fails on the pull request; only main publishes them.
+  badges:
+    needs: [check, wasm, msrv]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/download-artifact@v4
+        with:
+          path: ${{ runner.temp }}/measured
+      - name: Badge values
+        run: >-
+          node scripts/badges.mjs --out "$RUNNER_TEMP/badges"
+          --tests "$RUNNER_TEMP/measured/test-output/test-output.txt"
+          --wasm "$RUNNER_TEMP/measured/wasm/tyche_market_bg.wasm"
+      - if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: badges
+          path: ${{ runner.temp }}/badges
+          if-no-files-found: error
+          retention-days: 7
+
+  # Commits the badge JSON to the orphan branch `badges`, which the README's
+  # img.shields.io/endpoint badges read. Only after a green run on main.
+  publish-badges:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: badges
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: publish-badges
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: badges
+          path: ${{ runner.temp }}/badges
+      - name: Commit to the badges branch
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          branch="$RUNNER_TEMP/badges-branch"
+          status=0
+          git ls-remote --exit-code --heads origin badges > /dev/null || status=$?
+          if [ "$status" -eq 0 ]; then
+            git fetch --depth=1 origin badges
+            git worktree add -B badges "$branch" FETCH_HEAD
+          elif [ "$status" -eq 2 ]; then
+            git worktree add --detach "$branch"
+            git -C "$branch" switch --orphan badges
+          else
+            exit "$status"
+          fi
+          find "$branch" -maxdepth 1 -name '*.json' -delete
+          cp "$RUNNER_TEMP"/badges/*.json "$branch"/
+          cd "$branch"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The badges are unchanged."
+            exit 0
+          fi
+          git commit -q -m "Badges measured on ${GITHUB_SHA}"
+          git push origin HEAD:refs/heads/badges
