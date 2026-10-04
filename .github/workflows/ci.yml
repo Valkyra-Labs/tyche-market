@@ -119,7 +119,7 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           branch="$RUNNER_TEMP/badges-branch"
           status=0
-          git ls-remote --exit-code --heads origin badges > /dev/null || status=$?
+          git ls-remote --exit-code origin refs/heads/badges > /dev/null || status=$?
           if [ "$status" -eq 0 ]; then
             git fetch --depth=1 origin badges
             git worktree add -B badges "$branch" FETCH_HEAD
