@@ -44,7 +44,12 @@ docs/MEASUREMENTS.md. Method, stamps and limits for the rest:
 - Cuts a few symbols out of a day, or out of an existing `.tyc`, into a
   small capture file for demos.
 - Replays one symbol's day with seeking (a book snapshot every 20,000
-  messages), the book midpoint and a liquidity heatmap.
+  messages), the book midpoint and a liquidity heatmap. A replay has
+  size limits (256 MiB of capture, 6 million messages, 10,000 resting
+  orders and 5,000 price levels on the book by default, about twice the
+  largest measured day and far above its deepest book), so a capture
+  from an unknown source fails with a coded error instead of taking
+  unbounded memory.
 - Refuses damaged pcap input with an error rather than a panic, and
   records or blocks over 256 KiB before reading them.
 - Runs the DEEP+ versus DEEP parity check.
