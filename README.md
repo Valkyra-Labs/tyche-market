@@ -45,6 +45,8 @@ docs/MEASUREMENTS.md. Method, stamps and limits for the rest:
   small capture file for demos.
 - Replays one symbol's day with seeking (a book snapshot every 20,000
   messages), the book midpoint and a liquidity heatmap.
+- Refuses damaged pcap input with an error rather than a panic, and
+  records or blocks over 256 KiB before reading them.
 - Runs the DEEP+ versus DEEP parity check.
 - Builds to WebAssembly (`--features wasm`).
 
