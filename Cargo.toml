@@ -36,3 +36,7 @@ debug = 1
 [[test]]
 name = "samples"
 required-features = ["gzip"]
+
+[[test]]
+name = "hostile"
+required-features = ["gzip"]

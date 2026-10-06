@@ -14,7 +14,11 @@ pub struct TycheReplay {
 
 #[wasm_bindgen]
 impl TycheReplay {
-    /// Load one symbol from a DEEP+ capture file (`.tyc`).
+    /// Load one symbol from a DEEP+ capture file (`.tyc`), within the
+    /// default limits (`replay::Limits`). The error's message begins with a
+    /// stable code and a colon: `format`, `truncated`, or, for a capture
+    /// past a limit, `capture_too_large`, `too_many_messages`,
+    /// `too_many_levels` or `too_many_orders`.
     #[wasm_bindgen(constructor)]
     pub fn new(bytes: &[u8], symbol: &str) -> Result<TycheReplay, JsError> {
         Replay::from_capture(bytes, symbol)
